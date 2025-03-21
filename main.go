@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"pumahawk.com/webserver/database"
 	"pumahawk.com/webserver/endpoints"
 	mylog "pumahawk.com/webserver/log"
 	"pumahawk.com/webserver/server"
@@ -18,7 +19,7 @@ func main() {
 
 	InitApp()
 
-	log.Printf("Start web server %s", GlobalAppFlag.address)
+	log.Printf("Start web server %s", GlobalAppFlag.Address)
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
@@ -50,7 +51,7 @@ func CreateAppContext() server.AppContext {
 	db := CreateDB()
 	ctx := server.AppContext{
 		Log: &logger,
-		DB: &db,
+		DB: db,
 	}
 	return ctx
 }
@@ -66,7 +67,19 @@ func CreateLogger() mylog.Logger {
 	return logger
 }
 
-func CreateDB() sql.DB {
-	log.Fatal("Database connection not implemented")
-	return sql.DB{}
+func CreateDB() *sql.DB {
+	dbConf := GetDatabaseConfiguration()
+	db, err := database.CreateDatabaseConnection(dbConf)
+	if err != nil {
+		log.Fatal("Unable to start database connection", err)
+	}
+	return db
+}
+
+func GetDatabaseConfiguration() database.DBConf {
+	return database.DBConf{
+		User: GlobalAppFlag.DB.User,
+		Password: GlobalAppFlag.DB.Password,
+		DBName: GlobalAppFlag.DB.Database,
+	}
 }
