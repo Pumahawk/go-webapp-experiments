@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:embed *.tmpl.*
+//go:embed templates/*.tmpl.*
 var tmplFiles embed.FS
 
 func LoadTemplateOrFatal() *htmltemplate.Template {
@@ -17,7 +17,7 @@ func LoadTemplateOrFatal() *htmltemplate.Template {
 		"nilV": NilV,
 	}
 	tpl.Funcs(funcMap)
-	tpl, err := tpl.ParseFS(tmplFiles, "**.tmpl.**")
+	tpl, err := tpl.ParseFS(tmplFiles, "templates/**.tmpl.**")
 	if err != nil {
 		log.Fatal("Unable to load embed template files", err)
 	}

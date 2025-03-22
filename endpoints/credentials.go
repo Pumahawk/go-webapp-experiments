@@ -42,7 +42,10 @@ func GetCredentialsEndpoint(ctx *server.AppContext) server.EndpointResult {
 		}
 
 		if credentials != nil {
-			tpl.ExecuteTemplate(w, "credential.tmpl.html", credentials)
+			err = tpl.ExecuteTemplate(w, "credential.tmpl.html", credentials)
+			if err != nil {
+				log.Error("Unable to write template response", err)
+			}
 		} else {
 			w.WriteHeader(404)
 			fmt.Fprintf(w, "Credential not found credential %d", id)
