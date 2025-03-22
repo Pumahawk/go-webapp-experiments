@@ -2,10 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"html/template"
 
 	"pumahawk.com/webserver/database"
 	"pumahawk.com/webserver/endpoints"
@@ -54,8 +54,8 @@ func CreateAppContext() server.AppContext {
 	db := CreateDB()
 	tpl := GetTemplate()
 	ctx := server.AppContext{
-		Log: &logger,
-		DB:  db,
+		Log:      &logger,
+		DB:       db,
 		Template: tpl,
 	}
 	return ctx

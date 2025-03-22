@@ -3,9 +3,9 @@ package templates
 import (
 	"embed"
 	"fmt"
+	htmltemplate "html/template"
 	"log"
 	"strings"
-	htmltemplate "html/template"
 )
 
 //go:embed *.tmpl.*
@@ -21,7 +21,7 @@ func LoadTemplateOrFatal() *htmltemplate.Template {
 	if err != nil {
 		log.Fatal("Unable to load embed template files", err)
 	}
-	return tpl;
+	return tpl
 }
 
 func NilV(v any) string {
