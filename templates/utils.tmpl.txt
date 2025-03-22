@@ -1,3 +1,0 @@
-{{- define "nilV" }}
-{{- if . }}{{.}}{{else}}null{{end}}
-{{- end}}

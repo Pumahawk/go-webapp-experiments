@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"text/template"
+	"html/template"
 
 	"pumahawk.com/webserver/log"
 )

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"text/template"
+	"html/template"
 
 	"pumahawk.com/webserver/database"
 	"pumahawk.com/webserver/endpoints"
