@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 
 	"pumahawk.com/webserver/database"
 	"pumahawk.com/webserver/endpoints"
@@ -58,8 +59,10 @@ func CreateAppContext() server.AppContext {
 
 func InitEndpoints(ctx *server.AppContext) {
 	helloWolrdEndpoint := endpoints.HelloWorlsEndpoint(ctx)
+	getCredentialsEndpoint := endpoints.GetCredentialsEndpoint(ctx)
 
 	http.HandleFunc("/", BaseChain(helloWolrdEndpoint))
+	http.HandleFunc("/credentials", BaseChain(getCredentialsEndpoint))
 }
 
 func CreateLogger() mylog.Logger {
@@ -77,9 +80,12 @@ func CreateDB() *sql.DB {
 }
 
 func GetDatabaseConfiguration() database.DBConf {
+	user, _ := os.LookupEnv("DBUSER")
+	password, _ := os.LookupEnv("DBPASSWORD")
+	dbname, _ := os.LookupEnv("DBDBNAME")
 	return database.DBConf{
-		User: GlobalAppFlag.DB.User,
-		Password: GlobalAppFlag.DB.Password,
-		DBName: GlobalAppFlag.DB.Database,
+		User: user,
+		Password: password,
+		DBName: dbname,
 	}
 }

@@ -14,6 +14,10 @@ func (logger *Logger) Log(level string, format string, a ...any) {
 	log.Printf(format, a...)
 }
 
+func (logger *Logger) Error(format string, a ...any) {
+	logger.Log("ERROR", format, a...)
+}
+
 func (logger *Logger) Info(format string, a ...any) {
 	logger.Log("INFO", format, a...)
 }
