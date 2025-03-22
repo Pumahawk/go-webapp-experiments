@@ -5,19 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"text/template"
 
 	"pumahawk.com/webserver/server"
 )
-
-	const credentialLayout string = `
-	{{- define "nilV" }}
-	{{- if . }}{{.}}{{else}}null{{end}}
-	{{- end}}
-Credential: 
-Id: {{ .Id }}
-ParticipantId: {{template "nilV" .ParticipantId}}
-`
 
 type Credential struct {
 	Id            int64
@@ -28,10 +18,7 @@ type Credential struct {
 func GetCredentialsEndpoint(ctx *server.AppContext) server.EndpointResult {
 	db := ctx.DB
 	log := ctx.Log
-	tpl, err := template.New("layout").Parse(credentialLayout)
-	if err != nil {
-		log.Fatal("Unable to process credential response template", err)
-	}
+	tpl := ctx.Template
 	return func(w http.ResponseWriter, r *http.Request) {
 		errorResponse := server.ErrorResponseFunc(ctx, w)
 		conn, err := db.Conn(r.Context())
@@ -55,7 +42,7 @@ func GetCredentialsEndpoint(ctx *server.AppContext) server.EndpointResult {
 		}
 
 		if credentials != nil {
-			tpl.Execute(w, credentials)
+			tpl.ExecuteTemplate(w, "credential.tmpl.html", credentials)
 		} else {
 			w.WriteHeader(404)
 			fmt.Fprintf(w, "Credential not found credential %d", id)

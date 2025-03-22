@@ -5,11 +5,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 
 	"pumahawk.com/webserver/database"
 	"pumahawk.com/webserver/endpoints"
 	mylog "pumahawk.com/webserver/log"
 	"pumahawk.com/webserver/server"
+	"pumahawk.com/webserver/templates"
 )
 
 func main() {
@@ -50,9 +52,11 @@ func LogInterceptor(endpointFunc server.EndpointResult) server.EndpointResult {
 func CreateAppContext() server.AppContext {
 	logger := CreateLogger()
 	db := CreateDB()
+	tpl := GetTemplate()
 	ctx := server.AppContext{
 		Log: &logger,
 		DB:  db,
+		Template: tpl,
 	}
 	return ctx
 }
@@ -88,4 +92,8 @@ func GetDatabaseConfiguration() database.DBConf {
 		Password: password,
 		DBName:   dbname,
 	}
+}
+
+func GetTemplate() *template.Template {
+	return templates.LoadTemplateOrFatal()
 }

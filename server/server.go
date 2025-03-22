@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"text/template"
 
 	"pumahawk.com/webserver/log"
 )
@@ -15,6 +16,7 @@ type EndpointFunc = func(AppContext) EndpointResult
 type AppContext struct {
 	Log *log.Logger
 	DB  *sql.DB
+	Template *template.Template
 }
 
 func ErroResponse(ctx *AppContext, w io.Writer, format string, a ...any) {
