@@ -30,7 +30,7 @@ func main() {
 
 func InitApp() {
 	context := CreateAppContext()
-	InitEndpoints(&context);
+	InitEndpoints(&context)
 }
 
 func BaseChain(endpointFunc server.EndpointResult) server.EndpointResult {
@@ -52,7 +52,7 @@ func CreateAppContext() server.AppContext {
 	db := CreateDB()
 	ctx := server.AppContext{
 		Log: &logger,
-		DB: db,
+		DB:  db,
 	}
 	return ctx
 }
@@ -61,8 +61,8 @@ func InitEndpoints(ctx *server.AppContext) {
 	helloWolrdEndpoint := endpoints.HelloWorlsEndpoint(ctx)
 	getCredentialsEndpoint := endpoints.GetCredentialsEndpoint(ctx)
 
+	http.HandleFunc("/credentials/{id}", BaseChain(getCredentialsEndpoint))
 	http.HandleFunc("/", BaseChain(helloWolrdEndpoint))
-	http.HandleFunc("/credentials", BaseChain(getCredentialsEndpoint))
 }
 
 func CreateLogger() mylog.Logger {
@@ -84,8 +84,8 @@ func GetDatabaseConfiguration() database.DBConf {
 	password, _ := os.LookupEnv("DBPASSWORD")
 	dbname, _ := os.LookupEnv("DBDBNAME")
 	return database.DBConf{
-		User: user,
+		User:     user,
 		Password: password,
-		DBName: dbname,
+		DBName:   dbname,
 	}
 }

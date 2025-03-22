@@ -10,11 +10,11 @@ import (
 )
 
 type EndpointResult = func(http.ResponseWriter, *http.Request)
-type EndpointFunc = func(AppContext) (EndpointResult)
+type EndpointFunc = func(AppContext) EndpointResult
 
 type AppContext struct {
 	Log *log.Logger
-	DB *sql.DB
+	DB  *sql.DB
 }
 
 func ErroResponse(ctx *AppContext, w io.Writer, format string, a ...any) {
@@ -22,5 +22,11 @@ func ErroResponse(ctx *AppContext, w io.Writer, format string, a ...any) {
 	if err != nil {
 		log := ctx.Log
 		log.Error("Unable to write error %w", err)
+	}
+}
+
+func ErrorResponseFunc(ctx *AppContext, w io.Writer) func(string, ...any) {
+	return func(format string, a ...any) {
+		ErroResponse(ctx, w, format, a...)
 	}
 }
