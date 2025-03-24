@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -10,54 +11,87 @@ import (
 )
 
 type Credential struct {
-	Id            int64
-	Content       []byte
-	ParticipantId *string
+	Id            int64   `json:"id"`
+	Content       []byte  `json:"content"`
+	ParticipantId *string `json:"participantId"`
 }
 
-func GetCredentialsEndpoint(ctx *server.AppContext) server.EndpointResult {
-	db := ctx.DB
-	log := ctx.Log
-	tpl := ctx.Template
-	return func(w http.ResponseWriter, r *http.Request) {
-		errorResponse := server.ErrorResponseFunc(ctx, w)
-		conn, err := db.Conn(r.Context())
-		if err != nil {
-			errorResponse("Unable to start connections %v", err)
-			return
-		}
-		defer conn.Close()
+type CredentialMetadata struct {
+	Id            int64   `json:"id"`
+	ParticipantId *string `json:"participantId"`
+}
 
+type GetCredentialParameter struct {
+	Id int
+}
+
+func ExtractGetCredentialParameter(r *http.Request) (*GetCredentialParameter, error) {
+	ids := r.PathValue("id")
+	id, err := strconv.Atoi(ids)
+	if err != nil {
+		return nil, err
+	}
+	return &GetCredentialParameter{
+		Id: id,
+	}, nil
+}
+
+func GetCredentialsEndpoint(actx *server.AppContext) server.EndpointResult {
+	log := actx.Log
+	return server.JsonEndpoint(func(r *http.Request) server.HttpResponse {
+		params, err := ExtractGetCredentialParameter(r)
+		if err != nil {
+			return RestError(500, "Invalid id parameter %v", err)
+		}
+
+		conn, err := actx.DB.Conn(r.Context())
+		if err != nil {
+			return DBRestError(err)
+		}
+
+		credentials, err := CredentialsMetadataDBFindById(r.Context(), actx, conn, params.Id)
+		if err != nil {
+			log.Error("Unabe to retieve error", err)
+			return RestError(500, "Unable to retrieve credentials from database %v", params.Id)
+		}
+
+		return server.HttpResponse{
+			Code: 200,
+			Body: credentials,
+		}
+	})
+}
+
+func DonwloadCredentialEndpoint(actx *server.AppContext) server.EndpointResult {
+	log := actx.Log
+	return func(w http.ResponseWriter, r *http.Request) {
 		ids := r.PathValue("id")
 		id, err := strconv.Atoi(ids)
 		if err != nil {
-			errorResponse("Invalid id parameter %v", err)
+			log.Error("Unable to extract id. %v", err)
+			w.WriteHeader(400)
 			return
 		}
-		credentials, err := CredentialsMetadataDBFindById(ctx, id)
+		content, err := CredentialsContentDBFindById(actx, r.Context(), id)
 		if err != nil {
-			log.Error("Unabe to retieve error", err)
-			errorResponse("Unable to retrieve credentials from database %v", id)
+			log.Error("Unable to retrieve credentials content, %v", err)
+			w.WriteHeader(500)
 			return
-		}
-
-		if credentials != nil {
-			err = tpl.ExecuteTemplate(w, "credential.tmpl.html", credentials)
-			if err != nil {
-				log.Error("Unable to write template response", err)
-			}
+		} else if content != nil {
+			w.WriteHeader(200)
+			w.Write(content)
+			return
 		} else {
 			w.WriteHeader(404)
-			fmt.Fprintf(w, "Credential not found credential %d", id)
+			return
 		}
 	}
 }
 
-func CredentialsMetadataDBFindById(ctx *server.AppContext, id int) (*Credential, error) {
-	log := ctx.Log
-	db := ctx.DB
+func CredentialsMetadataDBFindById(ctx context.Context, actx *server.AppContext, conn *sql.Conn, id int) (*CredentialMetadata, error) {
+	log := actx.Log
 	log.Debug("Find credential by id %s", id)
-	row := db.QueryRow(`
+	row := conn.QueryRowContext(ctx, `
 		select
 			id,
 			participant_id
@@ -65,7 +99,7 @@ func CredentialsMetadataDBFindById(ctx *server.AppContext, id int) (*Credential,
 		where
 			id = $1
 		`, id)
-	var credential Credential
+	var credential CredentialMetadata
 	err := row.Scan(&credential.Id, &credential.ParticipantId)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -75,4 +109,27 @@ func CredentialsMetadataDBFindById(ctx *server.AppContext, id int) (*Credential,
 		}
 	}
 	return &credential, nil
+}
+
+func CredentialsContentDBFindById(actx *server.AppContext, ctx context.Context, id int) ([]byte, error) {
+	log := actx.Log
+	db := actx.DB
+	log.Debug("Find credential content by id %s", id)
+	row := db.QueryRowContext(ctx, `
+		select
+			content
+		from credential
+		where
+			id = $1
+		`, id)
+	var content []byte
+	err := row.Scan(&content)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, fmt.Errorf("Unable to find credential content by id %w", err)
+		}
+	}
+	return content, nil
 }

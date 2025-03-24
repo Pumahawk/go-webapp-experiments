@@ -62,11 +62,12 @@ func CreateAppContext() server.AppContext {
 }
 
 func InitEndpoints(ctx *server.AppContext) {
-	helloWolrdEndpoint := endpoints.HelloWorlsEndpoint(ctx)
-	getCredentialsEndpoint := endpoints.GetCredentialsEndpoint(ctx)
-
-	http.HandleFunc("/credentials/{id}", BaseChain(getCredentialsEndpoint))
-	http.HandleFunc("/", BaseChain(helloWolrdEndpoint))
+	http.HandleFunc("/credentials/{id}", BaseChain(endpoints.GetCredentialsEndpoint(ctx)))
+	http.HandleFunc("/credentials/{id}/download", BaseChain(endpoints.DonwloadCredentialEndpoint(ctx)))
+	http.HandleFunc("/keypair/download/public", BaseChain(endpoints.DownloadPublicKeyEndpoint(ctx)))
+	http.HandleFunc("/keypair/download/private", BaseChain(endpoints.DownloadPrivateKeyEndpoint(ctx)))
+	http.HandleFunc("/keypair/info", BaseChain(endpoints.GetInfoPrivateKeyEndpoint(ctx)))
+	http.HandleFunc("/", BaseChain(endpoints.HelloWorlsEndpoint(ctx)))
 }
 
 func CreateLogger() mylog.Logger {
