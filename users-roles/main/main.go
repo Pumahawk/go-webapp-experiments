@@ -1,45 +1,111 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"simpl-go/users-roles/controllers"
 	"simpl-go/users-roles/server"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	log.Println("Start users-roles")
-	conf := LoadFlags()
-	log.Printf("Address: %s", conf.Address)
+	conf, err := LoadFlags()
+	if err != nil {
+		log.Fatalf("Invalid flags. %s", err)
+	}
 
-	LoadHttpHandlers(conf)
+	log.Printf("Address: %s", conf.SEAddress)
 
-	err := http.ListenAndServe(":8080", nil)
+	err = LoadHttpHandlers(conf)
+	if err != nil {
+		log.Fatalf("Unable to load http handlers. %s", err)
+	}
+
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal("Server startup error: %w", err)
 	}
 }
 
-func LoadFlags() (config Config) {
-	flag.StringVar(&config.Address, "address", ":8080", "Http server address")
-	flag.BoolVar(&config.Indent, "response-indent", false, "JSON response indentation")
+func LoadFlags() (*Config, error) {
+	var config Config
+	flag.StringVar(&config.SEAddress, "address", ":8080", "Http server address")
+	flag.BoolVar(&config.RSIndent, "response-indent", false, "JSON response indentation")
+	dbConnS := flag.String("db-conn", "", "Database connection string")
 	flag.Parse()
-	return
+	if *dbConnS == "" {
+		return nil, fmt.Errorf("Invalid flags. Database connection string mandatory")
+	} else {
+		config.DBConnS = *dbConnS
+	}
+	return &config, nil
 }
 
-func LoadHttpHandlers(config Config) {
-	jsonHandler := jsonHandlerIndent(config.Indent)
-	http.HandleFunc("/roles/{id}", jsonHandler(controllers.RoleFindById))
+func LoadHttpHandlers(config *Config) error {
+	db, err := GetDB(config)
+	if err != nil {
+		return fmt.Errorf("Unable load httphandlers for database connection. %w", err)
+	}
+	jsonHandler := jsonHandlerIndent(config.RSIndent)
+	http.HandleFunc("/roles/{id}", BaseChain(db, jsonHandler(controllers.RoleFindById)))
+	http.HandleFunc("/identity-attributes/search", BaseChain(db, jsonHandler(controllers.IdentityAttributeSearch)))
+	return nil
 }
 
-func jsonHandlerIndent(indent bool) func(server.RestController)func(http.ResponseWriter, *http.Request) {
-	return func(rc server.RestController) func(http.ResponseWriter, *http.Request) {
+func jsonHandlerIndent(indent bool) func(server.RestController) http.HandlerFunc {
+	return func(rc server.RestController) http.HandlerFunc {
 		return server.JsonHandler(indent, rc)
 	}
 }
 
+func DBConnChain(db *sql.DB, handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		conn, err := db.Conn(r.Context())
+		if err != nil {
+			server.JsonHandler(false, func(r *http.Request) server.RestResponse {
+				return controllers.ErrorResponse(500, "Unable to start db connections. %s", err)
+			})(w, r)
+			return
+		}
+		defer conn.Close()
+		rctx := context.WithValue(r.Context(), server.DBConnK, conn)
+		handler(w, r.WithContext(rctx))
+	}
+}
+
+func LogReqestChain(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("url: %s", r.URL.Path)
+		handler(w, r)
+	}
+}
+
+func BaseChain(db *sql.DB, handler http.HandlerFunc) http.HandlerFunc {
+	chain := handler
+	chain = DBConnChain(db, chain)
+	chain = LogReqestChain(chain)
+	return chain
+}
+
 type Config struct {
-	Address string
-	Indent bool
+	DBConnS string
+	RSIndent bool
+	SEAddress string
+}
+
+func GetDB(config *Config) (*sql.DB, error) {
+	db, err := sql.Open("postgres", config.DBConnS)
+	if err != nil {
+		return nil, fmt.Errorf("GetDB error. %w", err)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, fmt.Errorf("GetDB Ping error. %w", err)
+	}
+	return db, nil
 }

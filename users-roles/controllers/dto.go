@@ -7,3 +7,7 @@ type ErrorResponseDTO struct {
 type RoleDTO struct {
 	Id string `json:"id"`
 }
+
+type IdentityAttributeDTO struct {
+	Id string `json:"id"`
+}

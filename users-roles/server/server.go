@@ -18,7 +18,7 @@ type RestResponse struct {
 	Body any
 }
 
-func JsonHandler(indent bool, rest RestController) func(http.ResponseWriter, *http.Request) {
+func JsonHandler(indent bool, rest RestController) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := rest(r)
 		select {
@@ -31,7 +31,7 @@ func JsonHandler(indent bool, rest RestController) func(http.ResponseWriter, *ht
 			if indent {
 				encoder.SetIndent("", "    ")
 			}
-			err := encoder.Encode(resp)
+			err := encoder.Encode(resp.Body)
 			if err != nil {
 				log.Printf("Unable to write json response: %v", err)
 			}
