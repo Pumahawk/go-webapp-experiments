@@ -3,28 +3,24 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
+	"simpl-go/users-roles/db"
 	"simpl-go/users-roles/server"
-	"strings"
 )
 
-func IdentityAttributeSearch(ctx context.Context) ([]IdentityAttributeInfo, error) {
+func IdentityAttributeSearch(ctx context.Context, params IdentityAttributeSearchParams) ([]IdentityAttributeInfo, error) {
 	conn, err := server.DBConn(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieve connection for role identity attribute search. %w", err)
 	}
 
-	sb := strings.Builder{}
-	sb.WriteString(`
-		select 
-			id
-		from
-			identity_attribute
-		where
-			1=1
-	`)
-	query := sb.String()
+	query, err := db.Query("ida-search.sql", params)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to retrieve query from template: %w", err)
+	}
 
-	rows, err := conn.QueryContext(ctx, query)
+	log.Printf("Result params: %v", query.Params)
+	rows, err := conn.QueryContext(ctx, query.Sql, query.Params...)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to retrieve role from database. %w", err)
 	}

@@ -7,3 +7,7 @@ type RoleInfo struct {
 type IdentityAttributeInfo struct {
 	Id string
 }
+
+type IdentityAttributeSearchParams struct {
+	Id string
+}
