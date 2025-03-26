@@ -1,10 +1,15 @@
 package server
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 )
+
+var DBConnK = struct{}{}
 
 type RestController = func(r *http.Request) RestResponse
 
@@ -31,5 +36,19 @@ func JsonHandler(indent bool, rest RestController) func(http.ResponseWriter, *ht
 				log.Printf("Unable to write json response: %v", err)
 			}
 		}
+	}
+}
+
+func DBConn(ctx context.Context) (*sql.Conn, error) {
+	c := ctx.Value(DBConnK)
+	if c != nil {
+		conn, ok := c.(*sql.Conn)
+		if ok {
+			return conn, nil
+		} else {
+			return nil, fmt.Errorf("Invalid database connection type. %T", conn)
+		}
+	} else {
+		return nil, fmt.Errorf("Missing *sql.Conn in context")
 	}
 }
